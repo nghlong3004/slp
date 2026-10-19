@@ -1,0 +1,10 @@
+# Requested release. Never fall back silently to an older release.
+version = "1.3.0"
+
+[preferences]
+autoSwitch = true
+autoContinue = true
+balanceNewAgents = false
+showComposerPill = true
+autoRedeem = false
+forkOtherProvider = false

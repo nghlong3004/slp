@@ -1,0 +1,21 @@
+id = "codex"
+enabled = true
+adapter = "codex"
+extends = "codex"
+label = "Codex"
+command = ["codex"]
+binary_env = "CODEX_BIN"
+canonical_home = "~/.codex"
+canonical_home_env = "SLP_CANONICAL_HOME"
+model_instructions = "providers/codex/model-instructions.md"
+# ZeroSub owns CODEX_HOME/auth. Role settings are passed as CLI overrides.
+# Set to "isolated" to restore the previous standalone role-home behavior.
+account_routing = "zerosub"
+# Ultra advertises automatic native delegation; SLP delegates through Paseo.
+excluded_efforts = ["ultra"]
+
+[provider_ids]
+# Preserve existing Paseo provider identities and session resume behavior.
+lead = "slp-lead"
+supervisor = "slp-supervisor"
+peer = "slp-peer"

@@ -1,0 +1,15 @@
+# Ready to configure after installing/authenticating Claude Code.
+# Set enabled=true and add models with their verified supported effort IDs.
+id = "claude"
+enabled = false
+adapter = "prompt-argument"
+extends = "claude"
+label = "Claude Code"
+command = ["claude"]
+binary_env = "CLAUDE_BIN"
+prompt_args = ["--append-system-prompt-file", "{prompt_file}"]
+model_args = ["--model", "{model}"]
+effort_args = ["--effort", "{effort}"]
+models = []
+# Uses Claude's existing config/auth/session home. Only role prompt files are
+# generated under the external runtime/claude/<role>; Codex config is never reused here.

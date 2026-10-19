@@ -1,0 +1,42 @@
+version = 2
+default_provider = "codex"
+
+[profiles]
+# Saved shortcuts. Other supported efforts remain available in the picker.
+efforts = ["high", "xhigh"]
+
+[roles.lead]
+provider = "codex"
+model = "gpt-6.1-sol"
+effort = "high"
+notes = "Lead: owns technical framing, delegation to Peer profiles, integration, verification, and acceptance."
+
+[roles.supervisor]
+provider = "codex"
+model = "gpt-6.1-sol"
+effort = "high"
+notes = "Supervisor: observes named workspaces and routes authorized intent through Lead. Start only when supervision is requested."
+# Keep observation, agent recovery, and this session's own heartbeat available.
+# Project execution and workspace-wide lifecycle actions belong to Lead.
+disabled_tools = [
+  "create_workspace", "rename_workspace", "archive_workspace",
+  "start_workspace_script", "stop_workspace_script",
+  "create_terminal", "send_terminal_keys", "kill_terminal",
+  "respond_to_permission",
+  "create_schedule", "update_schedule", "run_schedule_once",
+  "pause_schedule", "resume_schedule", "delete_schedule",
+]
+
+[roles.peer]
+provider = "codex"
+model = "gpt-6.1-sol"
+effort = "high"
+notes = "Peer: one bounded Lead assignment, including implementation, investigation, or independent read-only review. Does not create or coordinate agents. For review set modeId=read-only."
+disabled_tools = [
+  "create_agent", "send_agent_prompt", "cancel_agent", "archive_agent",
+  "kill_agent", "update_agent", "set_agent_mode", "respond_to_permission",
+  "create_workspace", "rename_workspace", "archive_workspace",
+  "create_heartbeat", "delete_heartbeat",
+  "create_schedule", "update_schedule", "run_schedule_once",
+  "pause_schedule", "resume_schedule", "delete_schedule",
+]

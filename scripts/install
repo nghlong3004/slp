@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""Install source links and migrate the previous layout without losing state."""
+from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import sys
+
+root = Path(os.environ.get("SLP_ROOT", Path(__file__).resolve().parent.parent)).expanduser().resolve()
+sys.path.insert(0, str(root / "scripts/lib"))
+from slp_core.common import SlpError, atomic_write, state_home, xdg_home
+
+
+def install():
+    home = Path.home()
+    config = xdg_home("XDG_CONFIG_HOME", home / ".config") / "slp"
+    target = Path(os.environ.get("SLP_CONFIG_HOME", root / "config")).expanduser().resolve()
+    runtime = Path(os.environ.get("SLP_RUNTIME_ROOT") or state_home() / "runtime").expanduser().resolve()
+    legacy = root / ".runtime"
+    migrate_runtime = legacy.is_dir() and not legacy.is_symlink() and legacy != runtime
+    if legacy.is_symlink() and legacy.resolve() != runtime:
+        raise SlpError(f"Unrecognized legacy runtime link: {legacy}")
+    if legacy.exists() and not legacy.is_dir():
+        raise SlpError(f"Runtime must be a directory: {legacy}")
+    if migrate_runtime and (runtime.exists() or runtime.is_symlink()):
+        raise SlpError(f"Both legacy and external runtimes exist; refusing to merge: {runtime}")
+    if not (target / "slp.toml").is_file():
+        raise SlpError(f"Missing SLP source configuration: {target}")
+    links = [(config, target)] + [(home / ".local/bin" / name, root / "scripts" / name)
+                                  for name in ("slp", "slp-sync")]
+    for path, destination in links:
+        if path.is_symlink() and path.resolve() != destination.resolve():
+            raise SlpError(f"Refusing to replace an unrelated symlink: {path}")
+    if config.exists() and not config.is_symlink():
+        if not (config / "overlays").is_dir() or not (config / "workflow/WORKSPACE_PROTOCOL.md").is_file():
+            raise SlpError(f"Unrecognized configuration directory: {config}")
+    moves = []
+    inspect_runtime = legacy if migrate_runtime else runtime
+    for role in ("lead", "supervisor", "peer"):
+        source = inspect_runtime / role
+        destination = inspect_runtime / "codex" / role
+        if source.is_symlink():
+            if source.resolve() != destination.resolve():
+                raise SlpError(f"Unrecognized legacy runtime link: {source}")
+        elif source.exists():
+            if destination.exists() or destination.is_symlink():
+                raise SlpError(f"Both old and new runtimes exist; refusing to merge: {destination}")
+            moves.append((runtime / role, runtime / "codex" / role))
+    snapshots = root / "runtime/snapshots"
+    snapshot_target = runtime.parent / "snapshots"
+    migrate_snapshots = snapshots.exists() and not snapshots.is_symlink() and snapshots != snapshot_target
+    if snapshots.is_symlink() and snapshots.resolve() != snapshot_target:
+        raise SlpError(f"Unrecognized snapshot link: {snapshots}")
+    if migrate_snapshots and (snapshot_target.exists() or snapshot_target.is_symlink()):
+        raise SlpError(f"Both legacy and external snapshots exist; refusing to merge: {snapshot_target}")
+    # Renaming on one filesystem preserves inodes, open databases and WAL files.
+    # Refuse cross-filesystem copies of potentially active session state.
+    for source, destination in ([(legacy, runtime)] if migrate_runtime else []) + ([(snapshots, snapshot_target)] if migrate_snapshots else []):
+        parent = destination.parent
+        while not parent.exists():
+            parent = parent.parent
+        if source.stat().st_dev != parent.stat().st_dev:
+            raise SlpError(f"Stop active sessions and migrate across filesystems explicitly: {source}")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    backup = state_home() / "backups" / f"layout-{stamp}"
+    archived = []
+    if migrate_runtime:
+        runtime.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        runtime.parent.chmod(0o700)
+        legacy.rename(runtime)
+        legacy.symlink_to(runtime, target_is_directory=True)
+        archived.append({"from": str(legacy), "to": str(runtime), "compatibility_link": True})
+    runtime.mkdir(parents=True, exist_ok=True, mode=0o700)
+    runtime.chmod(0o700)
+    if migrate_snapshots:
+        snapshot_target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        snapshots.rename(snapshot_target)
+        snapshots.symlink_to(snapshot_target, target_is_directory=True)
+        archived.append({"from": str(snapshots), "to": str(snapshot_target), "compatibility_link": True})
+    for path, destination in links:
+        if path.is_symlink():
+            # Refresh a link whose old spelling resolves through a compatibility alias.
+            if path.readlink() != destination:
+                path.unlink()
+                path.symlink_to(destination, target_is_directory=destination.is_dir())
+            continue
+        if path.exists():
+            archive = backup / path.relative_to(home)
+            archive.parent.mkdir(parents=True, exist_ok=True)
+            path.rename(archive)
+            archived.append({"from": str(path), "to": str(archive)})
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.symlink_to(destination, target_is_directory=destination.is_dir())
+    for source, destination in moves:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.parent.chmod(0o700)
+        source.rename(destination)
+        source.symlink_to(destination.relative_to(source.parent), target_is_directory=True)
+        archived.append({"from": str(source), "to": str(destination), "compatibility_link": True})
+    # Keep paths referenced by old generated configs readable during transition.
+    compat = target / "model-instructions.md"
+    if not compat.exists() and not compat.is_symlink():
+        compat.symlink_to("providers/codex/model-instructions.md")
+    if archived:
+        atomic_write(backup / "migration.json", json.dumps(archived, indent=2) + "\n")
+        print(f"Original files and migration map: {backup}")
+    print(f"Configuration: {config} -> {target}")
+    print(f"Persistent runtime: {runtime}")
+    print("Run slp paseo sync --reload to validate and apply role/model profiles.")
+
+
+try:
+    install()
+except (SlpError, OSError) as error:
+    print(f"install: {error}", file=sys.stderr)
+    sys.exit(1)

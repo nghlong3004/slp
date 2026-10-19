@@ -1,0 +1,15 @@
+# Local state and compatibility links (match directories AND symlinks).
+/.runtime
+/runtime
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+auth.json
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+.DS_Store
