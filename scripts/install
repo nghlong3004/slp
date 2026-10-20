@@ -28,6 +28,12 @@ def install():
         raise SlpError(f"Missing SLP source configuration: {target}")
     links = [(config, target)] + [(home / ".local/bin" / name, root / "scripts" / name)
                                   for name in ("slp", "slp-sync")]
+    # User skills stay discoverable when ZeroSub selects another CODEX_HOME.
+    for manifest in sorted((target / "skills").glob("*/SKILL.md")):
+        skill = home / ".agents/skills" / manifest.parent.name
+        if skill.exists() and not skill.is_symlink():
+            raise SlpError(f"Refusing to replace a private skill directory: {skill}")
+        links.append((skill, manifest.parent))
     for path, destination in links:
         if path.is_symlink() and path.resolve() != destination.resolve():
             raise SlpError(f"Refusing to replace an unrelated symlink: {path}")

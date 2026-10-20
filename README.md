@@ -187,6 +187,25 @@ Environment overrides: `SLP_ROOT`, `SLP_CONFIG_HOME`, `SLP_RUNTIME_ROOT`,
 `PASEO_HOME`, `SLP_CANONICAL_HOME`, and `CODEX_BIN`. `SLP_MODEL_CATALOG` is an
 offline fixture override. Runtime paths always include provider then role.
 
+## RTK and Ponytail
+
+Lead and implementation Peers load the [coding-tool guidance](config/workflow/CODING_TOOLS.md)
+through their role prompt. Ponytail uses `full` within the existing assignment;
+RTK is called selectively for verbose shell output. Exact evidence and full
+instruction reads use normal commands. Supervisor keeps its observation role.
+
+The pinned Ponytail skill and its MIT license are included under
+`config/skills/ponytail/`. `./scripts/install` links it into
+`~/.agents/skills/ponytail`, so Codex discovers it even when ZeroSub changes
+`CODEX_HOME`. Installation refuses to overwrite an unrelated local skill.
+Install RTK separately on each daemon host; the tested binary is RTK OSS
+1.0.1 under `~/.local/bin/rtk`. No API proxy or global rewrite hook is enabled.
+
+After role-source changes, run `slp paseo sync --reload` and start a new role
+session to load the updated prompt. Paseo needs no additional MCP server or
+provider for these tools. Agents choose explicit RTK commands; this is not
+automatic interception of every shell call. See [setup and verification](docs/CODING_TOOLS.md).
+
 ## Add another provider
 
 Codex is enabled by default. A disabled Claude Code configuration is included;

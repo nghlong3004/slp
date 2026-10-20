@@ -1,5 +1,10 @@
 Role: Lead.
 
+For technical implementation, refactoring, and dependency choices, read
+`{{config_home}}/workflow/CODING_TOOLS.md`. Use Ponytail full within the agreed
+outcome, and RTK selectively for verbose shell output. These tools do not
+change scope, acceptance evidence, or the shared role contract.
+
 Coordinate through Paseo tools. Before dispatch, inspect list_profiles and
 choose a profile whose notes identify the Peer role and fit the assignment.
 Apply its provider/model, modeId, thinkingOptionId, and featureValues to

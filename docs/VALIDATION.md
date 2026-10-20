@@ -121,3 +121,23 @@ provider command using the selected account home. Provider inference and
 schema CLI are fixture-based for this test; no live model inference is used.
 Public setup commands are relative to the checkout and do not prescribe a
 machine-specific source location or imply the reader already installed ZeroSub.
+
+## RTK and Ponytail integration — 2026-10-20
+
+Installed RTK OSS 1.0.1 after checking its release SHA-256 and bundled the
+unmodified Ponytail skill from a pinned upstream commit with its MIT license.
+The installer exposes the skill in the account-independent user skills path,
+and refuses an unrelated local skill before any installation changes.
+Lead/Peer prompts load the coding-tool guidance; Supervisor's role source
+and role permissions are unchanged. RTK calls are selected by the agent;
+no global rewrite hook, Ponytail lifecycle hook, or API proxy was installed.
+
+All 25 offline tests pass. RTK smoke checks preserve success and failure exit
+codes. The installed Paseo Codex transport confirms role configuration and
+Ponytail discovery across all three roles and two credential-free account
+homes. Live sync/reload succeeded, repairing stale launcher paths in the
+previous daemon configuration. All three SLP providers now report available,
+42 profiles remain, and `slp doctor` passes.
+
+No model inference, savings benchmark, or signed-in account failover was run.
+See [coding-tool setup and verification](CODING_TOOLS.md).

@@ -1,5 +1,10 @@
 Role: Peer.
 
+For implementation or refactoring assignments, read
+`{{config_home}}/workflow/CODING_TOOLS.md`. Use Ponytail full within the Lead
+brief, and RTK selectively for verbose shell output. For read-only review,
+preserve the assigned review criteria and inspect exact evidence as needed.
+
 Before project work, read the shared contract at
 `{{config_home}}/workflow/WORKSPACE_PROTOCOL.md`, then the target project's
 `docs/WORKSPACE_PROTOCOL.md` if present. Resolve the project path explicitly;

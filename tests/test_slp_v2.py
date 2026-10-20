@@ -103,6 +103,8 @@ class SlpTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((fixture_home / "config base/slp").resolve(), checkout / "config")
         self.assertEqual((fixture_home / ".local/bin/slp").resolve(), checkout / "scripts/slp")
+        self.assertEqual((fixture_home / ".agents/skills/ponytail").resolve(),
+                         checkout / "config/skills/ponytail")
         config = json.loads((fixture_home / "paseo/config.json").read_text())
         peer = config["agents"]["providers"]["slp-peer"]
         self.assertEqual(peer["env"]["SLP_ROOT"], str(checkout))
@@ -135,6 +137,20 @@ class SlpTests(unittest.TestCase):
         self.assertEqual((installation.runtime.parent / "snapshots/codex/lead.json").read_text(), snapshot.read_text())
         self.assertTrue((self.root / ".runtime").is_symlink())
         self.assertEqual((fake_home / ".config/slp").resolve(), self.root / "config")
+
+    def test_installer_preserves_private_skill_before_any_changes(self):
+        fake_home = self.root / "home"
+        private_skill = fake_home / ".agents/skills/ponytail"
+        private_skill.mkdir(parents=True)
+        manifest = private_skill / "SKILL.md"
+        manifest.write_text("private user skill")
+        with patch.object(Path, "home", return_value=fake_home), \
+             contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                runpy.run_path(str(ROOT / "scripts/install"))
+        self.assertEqual(manifest.read_text(), "private user skill")
+        self.assertFalse((fake_home / ".config/slp").exists())
+        self.assertFalse(self.installation.runtime.exists())
 
     def test_installer_refuses_conflicting_external_state_before_changes(self):
         os.environ.pop("SLP_RUNTIME_ROOT")
