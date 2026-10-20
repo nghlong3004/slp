@@ -75,7 +75,9 @@ profiles, and role tool restrictions remain in their existing configuration.
   confirmed selected-home settings and role-specific guidance; `skills/list`
   found the same Ponytail skill in both accounts.
 - The live Paseo daemon reloaded successfully. All three SLP providers report
-  available, with 42 profiles retained. `slp doctor` passes.
+  available, with 42 profiles retained at that point. `slp doctor` passes.
+  The later reduction to five model profiles is recorded in
+  [validation](VALIDATION.md#five-model-profiles--2026-10-20).
 
 No model inference or live account failover was run for these checks. They
 verify installation, discovery, configuration, launch compatibility and RTK's

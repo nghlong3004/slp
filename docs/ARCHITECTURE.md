@@ -36,7 +36,9 @@ Migration renames existing homes and keeps compatibility links.
 
 Native subagent hints and Ultra effort are excluded from SLP Codex homes.
 The catalog describes Ultra as automatic delegation; SLP project delegation
-uses Paseo. Saved High/Extra High profiles are shortcuts to model settings.
+uses Paseo. Saved profiles include each role's default and explicit per-role
+model/effort presets, validated against that provider's catalog. Optional
+global effort shortcuts remain supported; the full model picker is retained.
 
 Tool policies limit the catalog presented to a session. Role prompts define
 coordination authority. Filesystem permissions remain with the agent's own

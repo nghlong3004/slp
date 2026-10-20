@@ -65,6 +65,21 @@ def build(installation, existing, previous=None):
                     for option in item["thinkingOptions"]:
                         option["isDefault"] = option["id"] == default_effort
             pairs = [(default_model, default_effort)]
+            pair_notes = {}
+            if role_config.get("provider") == provider["id"]:
+                for preset in role_config.get("profiles", []):
+                    model_id = preset.get("model")
+                    model = next((m for m in report["models"] if m["id"] == model_id), None)
+                    if model is None:
+                        raise SlpError(f"Profile model is absent from {provider['id']} catalog: {model_id}")
+                    effort = preset.get("effort", model.get("default_effort"))
+                    if effort and effort not in [e["id"] for e in model.get("efforts", [])]:
+                        raise SlpError(f"Unsupported profile effort {effort} for {model_id}")
+                    pair = (model_id, effort)
+                    if pair in pairs:
+                        raise SlpError(f"Duplicate profile for {provider['id']}/{role}: {model_id}/{effort}")
+                    pairs.append(pair)
+                    pair_notes[pair] = preset.get("notes", role_config["notes"])
             for model in report["models"]:
                 supported = {effort["id"] for effort in model.get("efforts", [])}
                 for effort in installation.settings.get("profiles", {}).get("efforts", []):
@@ -75,7 +90,8 @@ def build(installation, existing, previous=None):
                 profile_id = (f"slp-{role}" if role_config.get("provider") == provider["id"] else f"{pid}-default") if index == 0 else f"{pid}-{model_id}-{effort}"
                 profile = {"id": profile_id,
                            "name": f"{role.title()} · {model['label']} · {EFFORT_LABELS.get(effort, effort or 'Default')}",
-                           "provider": pid, "model": model_id, "notes": role_config["notes"]}
+                           "provider": pid, "model": model_id,
+                           "notes": pair_notes.get((model_id, effort), role_config["notes"])}
                 if effort:
                     profile["thinkingOptionId"] = effort
                 profiles.append(profile)

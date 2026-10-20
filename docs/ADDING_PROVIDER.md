@@ -37,6 +37,11 @@ Set `enabled = true`, then run `slp paseo sync --reload`. Optional top-level
 the first configured model and its default effort are used. Saved role
 defaults in `slp.toml` apply to their selected provider only.
 
+Explicit `[[roles.peer.profiles]]` presets also apply only to that role's
+selected provider. Their models and efforts must exist in its catalog;
+invalid presets stop sync before configuration or runtime writes. Codex
+presets are not copied to another enabled provider.
+
 The generic launcher supports `prompt_args`, `model_args`, and `effort_args`
 with `{prompt_file}`, `{model}`, and `{effort}` placeholders. Final arguments
 from Paseo or a user follow these defaults. Each provider gets its own

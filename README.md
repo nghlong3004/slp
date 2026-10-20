@@ -13,7 +13,7 @@ small provider modules and configuration files rather than an inheritance tree.
 
 Each prompt explicitly declares `Role: Supervisor.`, `Role: Lead.`, or
 `Role: Peer.`. Paseo displays providers as **Supervisor**, **Lead**, **Peer**.
-Saved model choices use names such as **Lead · GPT-6.1-Sol · Extra High**.
+Saved model choices use names such as **Lead · GPT-6.1-Sol · High**.
 Display labels do not define authority; the loaded role prompt does.
 
 ## Ownership, project status, and recovery
@@ -110,24 +110,23 @@ cross-filesystem copies. Fresh installs need no checkout-local runtime links.
 
 ## Models and reasoning
 
-The reference Codex catalog observed during [validation](docs/VALIDATION.md)
-on 2026-10-19 exposed these seven visible models. Your local catalog and
-account access determine the choices generated on your machine:
+Five saved profiles are configured in `config/slp.toml`:
 
-| Model | Saved shortcuts for every role |
-| --- | --- |
-| GPT-6.1-Sol | High, Extra High |
-| GPT-6-Astra | High, Extra High |
-| GPT-6-Sol | High, Extra High |
-| GPT-6-Luna | High, Extra High |
-| GPT-5.6-Sol | High, Extra High |
-| GPT-5.6-Terra | High, Extra High |
-| GPT-5.6-Luna | High, Extra High |
+| Role / use | Model | Thinking |
+| --- | --- | --- |
+| Lead default | GPT-6.1-Sol | High |
+| Supervisor default | GPT-6.1-Sol | Medium |
+| Peer default | GPT-6.1-Sol | Medium |
+| Peer light work | GPT-6-Luna | Medium |
+| Peer difficult work | GPT-6-Sol | High |
 
-This creates **42 saved profiles: 14 per role**. Each role defaults to
-**GPT-6.1-Sol / High**, explicitly set in `config/slp.toml`. Other supported
-efforts (Low, Medium, Max) are available through the model/thinking picker.
-Change `[profiles].efforts` to change which shortcuts are saved.
+Role defaults and `[[roles.peer.profiles]]` select these shortcuts. Models
+and efforts are checked against the local catalog; an unavailable selection
+fails explicitly. The full discovered catalog remains available through the
+model/thinking picker, subject to account access. `[profiles].efforts = []`
+disables automatic shortcuts for every model/role combination; a nonempty
+list can still enable them. Sync removes previously managed shortcuts while
+preserving personal profiles.
 
 Discovery uses the signed-in canonical Codex home model cache, falling back
 to the installed bundled catalog only when there is no cache. Bundled fallback

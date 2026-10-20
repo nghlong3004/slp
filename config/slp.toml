@@ -2,8 +2,9 @@ version = 2
 default_provider = "codex"
 
 [profiles]
-# Saved shortcuts. Other supported efforts remain available in the picker.
-efforts = ["high", "xhigh"]
+# Save role defaults and the explicit Peer choices below.
+# Other supported models/efforts remain available in the picker.
+efforts = []
 
 [roles.lead]
 provider = "codex"
@@ -14,7 +15,7 @@ notes = "Lead: owns technical framing, delegation to Peer profiles, integration,
 [roles.supervisor]
 provider = "codex"
 model = "gpt-6.1-sol"
-effort = "high"
+effort = "medium"
 notes = "Supervisor: observes named workspaces and routes authorized intent through Lead. Start only when supervision is requested."
 # Keep observation, agent recovery, and this session's own heartbeat available.
 # Project execution and workspace-wide lifecycle actions belong to Lead.
@@ -30,7 +31,7 @@ disabled_tools = [
 [roles.peer]
 provider = "codex"
 model = "gpt-6.1-sol"
-effort = "high"
+effort = "medium"
 notes = "Peer: one bounded Lead assignment, including implementation, investigation, or independent read-only review. Does not create or coordinate agents. For review set modeId=read-only."
 disabled_tools = [
   "create_agent", "send_agent_prompt", "cancel_agent", "archive_agent",
@@ -40,3 +41,13 @@ disabled_tools = [
   "create_schedule", "update_schedule", "run_schedule_once",
   "pause_schedule", "resume_schedule", "delete_schedule",
 ]
+
+[[roles.peer.profiles]]
+model = "gpt-6-luna"
+effort = "medium"
+notes = "Peer: light work with a clear brief and checks, such as routine implementation, documentation, or investigation. For read-only review set modeId=read-only."
+
+[[roles.peer.profiles]]
+model = "gpt-6-sol"
+effort = "high"
+notes = "Peer: difficult debugging, cross-module investigation, or demanding review. Return evidence to Lead for acceptance. For read-only review set modeId=read-only."

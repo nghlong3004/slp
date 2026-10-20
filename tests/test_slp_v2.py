@@ -29,6 +29,14 @@ class SlpTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "scripts").symlink_to(ROOT / "scripts", target_is_directory=True)
         shutil.copytree(ROOT / "config", self.root / "config", symlinks=True)
+        # Keep legacy matrix coverage independent of the shipped role presets.
+        settings_path = self.root / "config/slp.toml"
+        fixture_settings = tomllib.loads(settings_path.read_text())
+        fixture_settings["profiles"]["efforts"] = ["high", "xhigh"]
+        for role in fixture_settings["roles"].values():
+            role["effort"] = "high"
+            role.pop("profiles", None)
+        settings_path.write_text(dump_toml(fixture_settings))
         provider_path = self.root / "config/providers/codex.toml"
         fixture_provider = tomllib.loads(provider_path.read_text())
         fixture_provider["account_routing"] = "isolated"
@@ -80,6 +88,7 @@ class SlpTests(unittest.TestCase):
             Installation.load()
 
     def test_arbitrary_checkout_installs_and_launches_without_root_overrides(self):
+        self.use_curated_profiles()
         checkout = self.root / "arbitrary parent" / "renamed tool"
         shutil.copytree(ROOT / "scripts", checkout / "scripts",
                         ignore=shutil.ignore_patterns("__pycache__"))
@@ -276,6 +285,72 @@ class SlpTests(unittest.TestCase):
         with self.assertRaisesRegex(SlpError, "absent"):
             self.adapter.prepare(self.installation, self.provider, "lead")
 
+    def use_curated_profiles(self):
+        settings = tomllib.loads((ROOT / "config/slp.toml").read_text())
+        (self.installation.config / "slp.toml").write_text(dump_toml(settings))
+        self.installation.settings = settings
+        catalog = json.loads(self.catalog.read_text())
+        catalog["models"][0]["supported_reasoning_levels"].append({"effort": "medium"})
+        for slug in ("gpt-6-luna", "gpt-6-sol"):
+            catalog["models"].append({"slug": slug, "display_name": slug,
+                "visibility": "list", "default_reasoning_level": "medium",
+                "supported_reasoning_levels": [{"effort": e} for e in ("medium", "high")]})
+        self.catalog.write_text(json.dumps(catalog))
+
+    def test_curated_profiles_replace_matrix_and_preserve_personal_profile(self):
+        existing = {"version": 1, "daemon": {"agentProfiles": [
+            {"id": "personal", "name": "Personal", "provider": "codex"}]}}
+        old_config, old_manifest, _ = paseo.build(self.installation, existing)
+        self.use_curated_profiles()
+        config, manifest, _ = paseo.build(self.installation, old_config, old_manifest)
+        profiles = config["daemon"]["agentProfiles"]
+        self.assertEqual(profiles[0], existing["daemon"]["agentProfiles"][0])
+        self.assertEqual({(p["id"], p["model"], p["thinkingOptionId"]) for p in profiles[1:]}, {
+            ("slp-lead", "gpt-6.1-sol", "high"),
+            ("slp-supervisor", "gpt-6.1-sol", "medium"),
+            ("slp-peer", "gpt-6.1-sol", "medium"),
+            ("slp-peer-gpt-6-luna-medium", "gpt-6-luna", "medium"),
+            ("slp-peer-gpt-6-sol-high", "gpt-6-sol", "high"),
+        })
+        self.assertEqual(len(manifest["profiles"]), 5)
+        self.assertIn("light work", next(p["notes"] for p in profiles if p.get("model") == "gpt-6-luna"))
+        for role in ("lead", "supervisor", "peer"):
+            models = config["agents"]["providers"][f"slp-{role}"]["models"]
+            self.assertIn("other-model", [m["id"] for m in models])
+            default = next(m for m in models if m["isDefault"])
+            effort = next(e["id"] for e in default["thinkingOptions"] if e["isDefault"])
+            self.assertEqual(effort, "high" if role == "lead" else "medium")
+        self.assertEqual(paseo.build(self.installation, config, manifest)[0], config)
+
+    def test_curated_defaults_reach_role_launches(self):
+        self.use_curated_profiles()
+        for role in ("lead", "supervisor", "peer"):
+            result = self.run_cli(role, "--fixture-check")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            runtime = self.installation.role_runtime(self.provider, role)
+            config = tomllib.loads((runtime / "config.toml").read_text())
+            self.assertEqual(config["model"], "gpt-6.1-sol")
+            self.assertEqual(config["model_reasoning_effort"], "high" if role == "lead" else "medium")
+
+    def test_invalid_role_profile_does_not_write_configuration_or_runtime(self):
+        self.use_curated_profiles()
+        directory = self.root / "paseo"
+        directory.mkdir()
+        path = directory / "config.json"
+        original = '{"version":1}'
+        path.write_text(original)
+        os.environ["PASEO_HOME"] = str(directory)
+        original_presets = copy.deepcopy(self.installation.role("peer")["profiles"])
+        for presets in ([{"model": "missing", "effort": "high"}],
+                        [{"model": "gpt-6-luna", "effort": "ultra"}],
+                        [original_presets[0], original_presets[0]]):
+            with self.subTest(presets=presets):
+                self.installation.role("peer")["profiles"] = presets
+                with self.assertRaises(SlpError):
+                    paseo.sync(self.installation)
+                self.assertEqual(path.read_text(), original)
+                self.assertFalse(self.installation.runtime.exists())
+
     def test_paseo_binary_version_probe_keeps_provider_identity(self):
         provider = {"id": "example", "enabled": True, "adapter": "prompt-argument", "extends": "claude",
                     "command": [str(self.fake)], "prompt_args": ["--prompt-file", "{prompt_file}"]}
@@ -302,6 +377,13 @@ class SlpTests(unittest.TestCase):
         self.assertIsNone(args["home"])
         self.assertIn("Role: Peer.", (runtime / "role.md").read_text())
         self.assertFalse((runtime / "config.toml").exists())
+
+        self.use_curated_profiles()
+        config, manifest, _ = paseo.build(self.installation, {"version": 1})
+        example_profiles = [p for p in config["daemon"]["agentProfiles"] if p["provider"].startswith("slp-example-")]
+        self.assertEqual(len(example_profiles), 3)
+        self.assertTrue(all(p["model"] == "example-model" for p in example_profiles))
+        self.assertEqual(len(manifest["profiles"]), 8)
 
     def test_invalid_candidate_does_not_touch_paseo_configuration(self):
         directory = self.root / "paseo"

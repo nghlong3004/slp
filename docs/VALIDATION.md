@@ -141,3 +141,24 @@ previous daemon configuration. All three SLP providers now report available,
 
 No model inference, savings benchmark, or signed-in account failover was run.
 See [coding-tool setup and verification](CODING_TOOLS.md).
+
+## Five model profiles — 2026-10-20
+
+The saved SLP profiles were reduced from 42 to five: Lead GPT-6.1-Sol/High,
+Supervisor GPT-6.1-Sol/Medium, Peer GPT-6.1-Sol/Medium, light Peer
+GPT-6-Luna/Medium, and difficult Peer GPT-6-Sol/High. Explicit per-role
+presets are checked against the selected provider's catalog before writes.
+The full seven-model catalog and manual thinking choices remain available.
+
+All 28 offline tests pass, covering profile migration, personal-profile
+preservation, defaults reaching role launches, invalid presets without writes,
+and isolation from another CLI provider. Live sync and daemon reload succeeded;
+Paseo's profile API returns the five SLP profiles plus the existing personal
+profile. A before/after comparison confirms unrelated Paseo settings were
+preserved, and generation from the resulting configuration is stable.
+
+All three SLP providers report available. The installed Paseo Codex transport
+reads GPT-6.1-Sol and the intended thinking default for each role from the
+actual app-server, with role instructions loaded in credential-free account
+homes. `slp doctor` passes. No model inference or account failover was run.
+Existing agent sessions were not forcibly switched to new defaults.
